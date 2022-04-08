@@ -32,6 +32,7 @@
 #include "runtime/vectorized_row_batch.h"
 #include "util/progress_updater.h"
 #include "util/spinlock.h"
+#include "vec/exec/volap_scanner.h"
 
 namespace doris {
 class IRuntimeFilter;
@@ -159,6 +160,7 @@ protected:
                             RuntimeProfile* profile);
 
     friend class OlapScanner;
+    friend class doris::vectorized::VOlapScanner;
 
     // Tuple id resolved in prepare() to set _tuple_desc;
     TupleId _tuple_id;
@@ -213,6 +215,8 @@ protected:
     std::condition_variable _row_batch_consumed_cv;
 
     std::list<RowBatch*> _materialized_row_batches;
+    // to limit _materialized_row_batches_bytes < _max_scanner_queue_size_bytes / 2
+    std::atomic_size_t _materialized_row_batches_bytes = 0;
 
     std::mutex _scan_batches_lock;
     std::condition_variable _scan_batch_added_cv;
@@ -220,10 +224,14 @@ protected:
     std::condition_variable _scan_thread_exit_cv;
 
     std::list<RowBatch*> _scan_row_batches;
+    // to limit _scan_row_batches_bytes < _max_scanner_queue_size_bytes / 2
+    std::atomic_size_t _scan_row_batches_bytes = 0;
 
     std::list<OlapScanner*> _olap_scanners;
 
     int _max_materialized_row_batches;
+    // to limit _materialized_row_batches_bytes and _scan_row_batches_bytes
+    size_t _max_scanner_queue_size_bytes;
     bool _start;
     // Used in Scan thread to ensure thread-safe
     std::atomic_bool _scanner_done;
