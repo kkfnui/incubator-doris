@@ -32,8 +32,8 @@
 #include "runtime/memory_scratch_sink.h"
 #include "runtime/mysql_table_sink.h"
 #include "runtime/odbc_table_sink.h"
-#include "runtime/result_sink.h"
 #include "runtime/result_file_sink.h"
+#include "runtime/result_sink.h"
 #include "runtime/runtime_state.h"
 #include "util/logging.h"
 #include "vec/sink/result_sink.h"
@@ -44,11 +44,9 @@ namespace doris {
 Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink,
                                   const std::vector<TExpr>& output_exprs,
                                   const TPlanFragmentExecParams& params,
-                                  const RowDescriptor& row_desc,
-                                  bool is_vec,
-                                  boost::scoped_ptr<DataSink>* sink,
-                                  DescriptorTbl& desc_tbl) {
-    DataSink* tmp_sink = NULL;
+                                  const RowDescriptor& row_desc, bool is_vec,
+                                  std::unique_ptr<DataSink>* sink, DescriptorTbl& desc_tbl) {
+    DataSink* tmp_sink = nullptr;
 
     switch (thrift_sink.type) {
     case TDataSinkType::DATA_STREAM_SINK: {
@@ -65,9 +63,9 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
                     pool, params.sender_id, row_desc, thrift_sink.stream_sink, params.destinations,
                     16 * 1024, send_query_statistics_with_every_batch);
         } else {
-            tmp_sink = new DataStreamSender(pool, params.sender_id, row_desc, thrift_sink.stream_sink,
-                                 params.destinations, 16 * 1024,
-                                 send_query_statistics_with_every_batch);
+            tmp_sink = new DataStreamSender(pool, params.sender_id, row_desc,
+                                            thrift_sink.stream_sink, params.destinations, 16 * 1024,
+                                            send_query_statistics_with_every_batch);
         }
         // RETURN_IF_ERROR(sender->prepare(state->obj_pool(), thrift_sink.stream_sink));
         sink->reset(tmp_sink);
@@ -177,7 +175,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
     }
     }
 
-    if (sink->get() != NULL) {
+    if (sink->get() != nullptr) {
         RETURN_IF_ERROR((*sink)->init(thrift_sink));
     }
 

@@ -281,3 +281,15 @@ fi
 
 echo "Finished patching $HDFS3_SOURCE"
 
+# aws-c-cal patch to fix compile error
+# This bug has been fixed in new version of aws-c-cal
+if [ $AWS_C_CAL_SOURCE == "aws-c-cal-0.4.5" ]; then
+    cd $TP_SOURCE_DIR/$AWS_C_CAL_SOURCE
+    if [ ! -f $PATCHED_MARK ]; then
+        patch -p1 < $TP_PATCH_DIR/aws-c-cal-0.4.5.patch
+        touch $PATCHED_MARK
+    fi
+    cd -
+fi
+echo "Finished patching $AWS_C_CAL_SOURCE"
+

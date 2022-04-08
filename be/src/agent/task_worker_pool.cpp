@@ -74,7 +74,7 @@ DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(agent_task_queue_size, MetricUnit::NOUNIT);
 const uint32_t TASK_FINISH_MAX_RETRY = 3;
 const uint32_t PUBLISH_VERSION_MAX_RETRY = 3;
 
-std::atomic_ulong TaskWorkerPool::_s_report_version(time(NULL) * 10000);
+std::atomic_ulong TaskWorkerPool::_s_report_version(time(nullptr) * 10000);
 Mutex TaskWorkerPool::_s_task_signatures_lock;
 map<TTaskType::type, set<int64_t>> TaskWorkerPool::_s_task_signatures;
 FrontendServiceClientCache TaskWorkerPool::_master_service_client_cache;

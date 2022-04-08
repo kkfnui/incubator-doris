@@ -104,6 +104,24 @@ val dorisSparkRDD = sc.dorisRDD(
 dorisSparkRDD.collect()
 ```
 ### Write
+
+#### SQL
+
+```sql
+CREATE TEMPORARY VIEW spark_doris
+USING doris
+OPTIONS(
+  "table.identifier"="$YOUR_DORIS_DATABASE_NAME.$YOUR_DORIS_TABLE_NAME",
+  "fenodes"="$YOUR_DORIS_FE_HOSTNAME:$YOUR_DORIS_FE_RESFUL_PORT",
+  "user"="$YOUR_DORIS_USERNAME",
+  "password"="$YOUR_DORIS_PASSWORD"
+);
+
+INSERT INTO spark_doris VALUES ("VALUE1","VALUE2",...);
+# or
+INSERT INTO spark_doris SELECT * FROM YOUR_TABLE
+```
+
 #### DataFrame(batch/stream)
 ```scala
 ## batch sink
@@ -119,6 +137,9 @@ mockDataDF.write.format("doris")
 	.option("doris.fenodes", "$YOUR_DORIS_FE_HOSTNAME:$YOUR_DORIS_FE_RESFUL_PORT")
   .option("user", "$YOUR_DORIS_USERNAME")
   .option("password", "$YOUR_DORIS_PASSWORD")
+  //other options
+  //specify the fields to write
+  .option("doris.write.fields","$YOUR_FIELDS_TO_WRITE")
   .save()
 
 ## stream sink(StructuredStreaming)
@@ -136,6 +157,9 @@ kafkaSource.selectExpr("CAST(key AS STRING)", "CAST(value as STRING)")
 	.option("doris.fenodes", "$YOUR_DORIS_FE_HOSTNAME:$YOUR_DORIS_FE_RESFUL_PORT")
   .option("user", "$YOUR_DORIS_USERNAME")
   .option("password", "$YOUR_DORIS_PASSWORD")
+  //other options
+  //specify the fields to write
+  .option("doris.write.fields","$YOUR_FIELDS_TO_WRITE")
   .start()
   .awaitTermination()
 ```
@@ -157,6 +181,7 @@ kafkaSource.selectExpr("CAST(key AS STRING)", "CAST(value as STRING)")
 | doris.exec.mem.limit             | 2147483648        | Memory limit for a single query. The default is 2GB, in bytes.                     |
 | doris.deserialize.arrow.async    | false             | Whether to support asynchronous conversion of Arrow format to RowBatch required for spark-doris-connector iteration                 |
 | doris.deserialize.queue.size     | 64                | Asynchronous conversion of the internal processing queue in Arrow format takes effect when doris.deserialize.arrow.async is true        |
+| doris.write.fields                | --                 | Specifies the fields (or the order of the fields) to write to the Doris table, fileds separated by commas.<br/>By default, all fields are written in the order of Doris table fields. |
 
 ### SQL & Dataframe Configuration
 

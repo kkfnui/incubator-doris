@@ -108,7 +108,7 @@ public:
     /**
      * Construct a roaring object from the C struct.
      *
-     * Passing a NULL point is unsafe.
+     * Passing a nullptr point is unsafe.
      */
     explicit Roaring64Map(roaring_bitmap_t* s) {
         roaring::Roaring r(s);
@@ -539,7 +539,7 @@ public:
 
     /**
      * Iterate over the bitmap elements. The function iterator is called once
-     * for all the values with ptr (can be NULL) as the second parameter of each
+     * for all the values with ptr (can be nullptr) as the second parameter of each
      * call.
      *
      * roaring_iterator is simply a pointer to a function that returns bool
@@ -1437,6 +1437,85 @@ public:
         }
         }
         return ss.str();
+    }
+
+
+    doris_udf::BigIntVal maximum() {
+        switch (_type) {
+            case SINGLE:
+                return doris_udf::BigIntVal(_sv);
+            case BITMAP:
+                return doris_udf::BigIntVal(_bitmap.maximum());
+            default:
+                return doris_udf::BigIntVal::null();
+        }
+    }
+
+    /**
+     * Return new set with specified range (not include the range_end)
+     */
+    int64_t sub_range(const int64_t& range_start, const int64_t& range_end, BitmapValue* ret_bitmap) {
+        int64_t count = 0; 
+        for (auto it = _bitmap.begin(); it != _bitmap.end(); ++it) {
+            if (*it < range_start) {
+                continue;
+            }
+            if (*it < range_end) {
+                ret_bitmap->add(*it);
+                ++count;
+            } else {
+                break;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Return new set with specified start and limit
+     * @param range_start the start value for the range
+     * @param cardinality_limit the length of the subset
+     * @return the real count for subset, maybe less than cardinality_limit
+     */
+    int64_t sub_limit(const int64_t& range_start, const int64_t& cardinality_limit, BitmapValue* ret_bitmap) {
+        int64_t count = 0;
+        for (auto it = _bitmap.begin(); it != _bitmap.end(); ++it) {
+            if (*it < range_start) {
+                continue;
+            }
+            if (count < cardinality_limit) {
+                ret_bitmap->add(*it);
+                ++count;
+            } else {
+                break;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Returns the bitmap elements, starting from the offset position.
+     * The number of returned elements is limited by the cardinality_limit parameter.
+     * Analog of the substring string function, but for bitmap.
+     */
+    int64_t offset_limit(const int64_t& offset, const int64_t& limit, BitmapValue* ret_bitmap) {
+        if (std::abs(offset) >= _bitmap.cardinality()) {
+            return 0;
+        }
+        int64_t abs_offset = offset;
+        if (offset < 0) {
+            abs_offset = _bitmap.cardinality() + offset;
+        }
+
+        int64_t count = 0;
+        int64_t offset_count = 0;
+        auto it = _bitmap.begin();
+        for (;it != _bitmap.end() && offset_count < abs_offset; ++it) {
+            ++offset_count;
+        }
+        for (;it != _bitmap.end() && count < limit; ++it, ++count) {
+            ret_bitmap->add(*it);
+        }
+        return count;
     }
 
 private:

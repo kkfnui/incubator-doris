@@ -299,7 +299,7 @@ public class SelectStmt extends QueryStmt {
                     ErrorReport.reportAnalysisException(ErrorCode.ERR_NO_DB_ERROR);
                 }
                 if (Strings.isNullOrEmpty(tableName)) {
-                    ErrorReport.reportAnalysisException(ErrorCode.ERR_BAD_TABLE_ERROR);
+                    ErrorReport.reportAnalysisException(ErrorCode.ERR_UNKNOWN_TABLE, tableName, dbName);
                 }
                 Database db = analyzer.getCatalog().getDbOrAnalysisException(dbName);
                 Table table = db.getTableOrAnalysisException(tableName);
@@ -525,7 +525,7 @@ public class SelectStmt extends QueryStmt {
         if (needToSql) {
             sqlString_ = toSql();
         }
-        if (!analyzer.safeIsEnableJoinReorderBasedCost()) {
+        if (analyzer.enableStarJoinReorder()) {
             LOG.debug("use old reorder logical in select stmt");
             reorderTable(analyzer);
         }
@@ -697,6 +697,15 @@ public class SelectStmt extends QueryStmt {
             materializeSlots(analyzer, havingConjuncts);
             aggInfo.materializeRequiredSlots(analyzer, baseTblSmap);
         }
+
+        // materialized all lateral view column and origin column
+        for (TableRef tableRef : fromClause_.getTableRefs()) {
+            if (tableRef.lateralViewRefs != null) {
+                for (LateralViewRef lateralViewRef : tableRef.lateralViewRefs) {
+                    lateralViewRef.materializeRequiredSlots();
+                }
+            }
+        }
     }
 
     protected void reorderTable(Analyzer analyzer) throws AnalysisException {
@@ -857,7 +866,7 @@ public class SelectStmt extends QueryStmt {
     private void expandStar(Analyzer analyzer, TableName tblName) throws AnalysisException {
         Collection<TupleDescriptor> descs = analyzer.getDescriptor(tblName);
         if (descs == null || descs.isEmpty()) {
-            ErrorReport.reportAnalysisException(ErrorCode.ERR_BAD_TABLE_ERROR, tblName.getTbl());
+            ErrorReport.reportAnalysisException(ErrorCode.ERR_UNKNOWN_TABLE, tblName.getTbl(), tblName.getDb());
         }
         for (TupleDescriptor desc : descs) {
             expandStar(tblName, desc);

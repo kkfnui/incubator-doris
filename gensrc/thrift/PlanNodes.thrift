@@ -51,6 +51,7 @@ enum TPlanNodeType {
   INTERSECT_NODE,
   EXCEPT_NODE,
   ODBC_SCAN_NODE,
+  TABLE_FUNCTION_NODE,
 }
 
 // phases of an execution node
@@ -151,6 +152,8 @@ struct TBrokerRangeDesc {
     15: optional bool fuzzy_parse;
     16: optional THdfsParams hdfs_params
     17: optional bool read_json_by_line;
+    // Whether read line by column defination, only for Hive
+    18: optional bool read_by_column_def;
 }
 
 struct TBrokerScanRangeParams {
@@ -653,6 +656,10 @@ struct TOlapRewriteNode {
     3: required Types.TTupleId output_tuple_id
 }
 
+struct TTableFunctionNode {
+    1: required list<Exprs.TExpr> fnCallExprList
+}
+
 // This contains all of the information computed by the plan as part of the resource
 // profile that is needed by the backend to execute.
 struct TBackendResourceProfile {
@@ -773,6 +780,8 @@ struct TPlanNode {
   36: optional list<TRuntimeFilterDesc> runtime_filters
 
   40: optional Exprs.TExpr vconjunct
+
+  41: optional TTableFunctionNode table_function_node
 }
 
 // A flattened representation of a tree of PlanNodes, obtained by depth-first

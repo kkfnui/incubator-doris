@@ -62,6 +62,7 @@ public class DorisStreamLoad implements Serializable{
     private String db;
     private String tbl;
     private String authEncoding;
+    private String columns;
 
     public DorisStreamLoad(String hostPort, String db, String tbl, String user, String passwd) {
         this.hostPort = hostPort;
@@ -74,7 +75,7 @@ public class DorisStreamLoad implements Serializable{
     }
 
     public DorisStreamLoad(SparkSettings settings) throws IOException, DorisException {
-        String hostPort = RestService.randomBackend(settings, LOG);
+        String hostPort = RestService.randomBackendV2(settings, LOG);
         this.hostPort = hostPort;
         String[] dbTable = settings.getProperty(ConfigurationOptions.DORIS_TABLE_IDENTIFIER).split("\\.");
         this.db = dbTable[0];
@@ -83,6 +84,7 @@ public class DorisStreamLoad implements Serializable{
         this.passwd = settings.getProperty(ConfigurationOptions.DORIS_REQUEST_AUTH_PASSWORD);
         this.loadUrlStr = String.format(loadUrlPattern, hostPort, db, tbl);
         this.authEncoding = Base64.getEncoder().encodeToString(String.format("%s:%s", user, passwd).getBytes(StandardCharsets.UTF_8));
+        this.columns = settings.getProperty(ConfigurationOptions.DORIS_WRITE_FIELDS);
     }
 
     public String getLoadUrlStr() {
@@ -108,6 +110,9 @@ public class DorisStreamLoad implements Serializable{
         conn.addRequestProperty("Expect", "100-continue");
         conn.addRequestProperty("Content-Type", "text/plain; charset=UTF-8");
         conn.addRequestProperty("label", label);
+        if (columns != null && !columns.equals("")) {
+            conn.addRequestProperty("columns", columns);
+        }
         conn.setDoOutput(true);
         conn.setDoInput(true);
         return conn;
@@ -150,6 +155,7 @@ public class DorisStreamLoad implements Serializable{
     }
 
     public void load(String value) throws StreamLoadException {
+        LOG.debug("Streamload Request:{} ,Body:{}", loadUrlStr, value);
         LoadResponse loadResponse = loadBatch(value);
         LOG.info("Streamload Response:{}",loadResponse);
         if(loadResponse.status != 200){
@@ -169,7 +175,7 @@ public class DorisStreamLoad implements Serializable{
 
     private LoadResponse loadBatch(String value) {
         Calendar calendar = Calendar.getInstance();
-        String label = String.format("audit_%s%02d%02d_%02d%02d%02d_%s",
+        String label = String.format("spark_streamload_%s%02d%02d_%02d%02d%02d_%s",
                 calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH),
                 calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND),
                 UUID.randomUUID().toString().replaceAll("-", ""));
@@ -194,12 +200,11 @@ public class DorisStreamLoad implements Serializable{
             while ((line = br.readLine()) != null) {
                 response.append(line);
             }
-//            log.info("AuditLoader plugin load with label: {}, response code: {}, msg: {}, content: {}",label, status, respMsg, response.toString());
             return new LoadResponse(status, respMsg, response.toString());
 
         } catch (Exception e) {
             e.printStackTrace();
-            String err = "failed to load audit via AuditLoader plugin with label: " + label;
+            String err = "failed to execute spark streamload with label: " + label;
             LOG.warn(err, e);
             return new LoadResponse(-1, e.getMessage(), err);
         } finally {

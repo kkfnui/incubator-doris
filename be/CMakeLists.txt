@@ -135,9 +135,9 @@ set(BOOST_ROOT ${THIRDPARTY_DIR})
 set(Boost_NO_BOOST_CMAKE OFF)
 
 if (NOT APPLE)
-    find_package(Boost 1.73.0 REQUIRED COMPONENTS regex system filesystem thread date_time program_options)
+    find_package(Boost 1.73.0 REQUIRED COMPONENTS system date_time)
 else()
-    find_package(Boost 1.73.0 COMPONENTS thread regex system filesystem date_time program_options)
+    find_package(Boost 1.73.0 COMPONENTS system date_time)
 endif()
 
 set(GPERFTOOLS_HOME "${THIRDPARTY_DIR}/gperftools")
@@ -293,8 +293,14 @@ set_target_properties(aws-checksums PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DI
 add_library(aws-s2n STATIC IMPORTED)
 set_target_properties(aws-s2n PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libs2n.a)
 
-add_library(minzip STATIC IMPORTED)
-set_target_properties(minzip PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libminizip.a)
+add_library(minizip STATIC IMPORTED)
+set_target_properties(minizip PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libminizip.a)
+
+add_library(gsasl STATIC IMPORTED)
+set_target_properties(gsasl PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libgsasl.a)
+
+add_library(breakpad STATIC IMPORTED)
+set_target_properties(breakpad PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libbreakpad_client.a)
 
 add_library(gsasl STATIC IMPORTED)
 set_target_properties(gsasl PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libgsasl.a)
@@ -435,6 +441,7 @@ include_directories(
     ${GPERFTOOLS_HOME}/include
     ${THIRDPARTY_DIR}/include/thrift/
     ${THIRDPARTY_DIR}/include/event/
+    ${THIRDPARTY_DIR}/include/breakpad/
 )
 
 set(WL_START_GROUP "-Wl,--start-group")
@@ -483,12 +490,7 @@ set(COMMON_THIRDPARTY
     librdkafka
     libs2
     snappy
-    Boost::regex
-    Boost::system
-    Boost::filesystem
-    Boost::thread
     Boost::date_time
-    Boost::program_options
     thrift
     thriftnb
     glog
@@ -520,7 +522,8 @@ set(COMMON_THIRDPARTY
     orc
     odbc
     cctz
-    minzip
+    minizip
+    breakpad
     ${AWS_LIBS}
     # put this after lz4 to avoid using lz4 lib in librdkafka
     librdkafka_cpp
