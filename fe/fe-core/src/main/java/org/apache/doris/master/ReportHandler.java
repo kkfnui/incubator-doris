@@ -813,6 +813,7 @@ public class ReportHandler extends Daemon {
         for (Long dbId : tabletRecoveryMap.keySet()) {
             Database db = Catalog.getCurrentCatalog().getDbNullable(dbId);
             if (db == null) {
+                LOG.info("db does not exist: {}", dbId);
                 continue;
             }
             List<Long> tabletIds = tabletRecoveryMap.get(dbId);
@@ -820,24 +821,28 @@ public class ReportHandler extends Daemon {
             for (int i = 0; i < tabletMetaList.size(); i++) {
                 TabletMeta tabletMeta = tabletMetaList.get(i);
                 if (tabletMeta == TabletInvertedIndex.NOT_EXIST_TABLET_META) {
+                    LOG.info("tablet meta does not exist: {}", tabletIds);
                     continue;
                 }
                 long tabletId = tabletIds.get(i);
                 long tableId = tabletMeta.getTableId();
                 OlapTable olapTable = (OlapTable) db.getTableNullable(tableId);
                 if (olapTable == null || !olapTable.writeLockIfExist()) {
+                    LOG.info("table does not exist: {}", tableId);
                     continue;
                 }
                 try {
                     long partitionId = tabletMeta.getPartitionId();
                     Partition partition = olapTable.getPartition(partitionId);
                     if (partition == null) {
+                        LOG.info("partition does not exist: {}", partitionId);
                         continue;
                     }
 
                     long indexId = tabletMeta.getIndexId();
                     MaterializedIndex index = partition.getIndex(indexId);
                     if (index == null) {
+                        LOG.info("index does not exist: {}", indexId);
                         continue;
                     }
 
@@ -845,15 +850,20 @@ public class ReportHandler extends Daemon {
 
                     Tablet tablet = index.getTablet(tabletId);
                     if (tablet == null) {
+                        LOG.info("tablet does not exist: {}", tabletId);
                         continue;
                     }
 
                     Replica replica = tablet.getReplicaByBackendId(backendId);
                     if (replica == null) {
+                        LOG.info("replica does not exist: {}", backendId);
                         continue;
                     }
 
                     for (TTabletInfo tTabletInfo : backendTablets.get(tabletId).getTabletInfos()) {
+                        LOG.info("schema hash: {} vs {}: {}, version miss: {}",
+                                tTabletInfo.getSchemaHash(), schemaHash, tabletId,
+                                (tTabletInfo.isSetVersionMiss() ? tTabletInfo.isVersionMiss() : false));
                         if (tTabletInfo.getSchemaHash() == schemaHash) {
                             if (tTabletInfo.isSetUsed() && !tTabletInfo.isUsed()) {
                                 if (replica.setBad(true)) {
@@ -870,6 +880,7 @@ public class ReportHandler extends Daemon {
                                 // it will be considered a version missing replica and will be handled accordingly.
                                 replica.setLastFailedVersion(1L);
                                 backendReplicasInfo.addMissingVersionReplica(tabletId);
+                                LOG.info("set fail version for tablet: {}", tabletId);
                                 break;
                             }
                         }
@@ -880,6 +891,7 @@ public class ReportHandler extends Daemon {
             }
         } // end for recovery map
 
+        LOG.info("add backend info empty: {}", backendReplicasInfo.isEmpty());
         if (!backendReplicasInfo.isEmpty()) {
             // need to write edit log the sync the bad info to other FEs
             Catalog.getCurrentCatalog().getEditLog().logBackendReplicasInfo(backendReplicasInfo);
