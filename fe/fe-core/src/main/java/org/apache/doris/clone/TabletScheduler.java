@@ -1307,7 +1307,7 @@ public class TabletScheduler extends MasterDaemon {
         Preconditions.checkState(tabletCtx.getState() == TabletSchedCtx.State.PENDING);
         tabletCtx.adjustPriority(stat);
         addTablet(tabletCtx, true /* force */);
-        LOG.debug("add back to queue. tablet: {}, err:{}", tabletCtx.getTabletId(), message)
+        LOG.debug("add back to queue. tablet: {}, err:{}", tabletCtx.getTabletId(), message);
     }
 
     private void finalizeTabletCtx(TabletSchedCtx tabletCtx, TabletSchedCtx.State state, String reason) {
