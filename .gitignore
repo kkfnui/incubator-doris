@@ -65,6 +65,8 @@ be/tags
 be/build*
 be/test/olap/test_data/tablet_meta_test.hdr
 build
+*.class
+
 
 ui/dist
 ui/node_modules
