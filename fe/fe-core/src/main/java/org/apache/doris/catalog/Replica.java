@@ -384,6 +384,8 @@ public class Replica implements Writable {
 
         // Case 4:
         if (this.version >= this.lastFailedVersion) {
+            LOG.info("replica {} on backend {} reset last failed version from {} to -1, version: {}",
+                    id, backendId, this.lastFailedVersion, this.version);
             this.lastFailedVersion = -1;
             this.lastFailedVersionHash = 0;
             this.lastFailedTimestamp = -1;
