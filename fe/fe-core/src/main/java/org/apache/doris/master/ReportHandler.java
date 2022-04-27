@@ -878,9 +878,11 @@ public class ReportHandler extends Daemon {
                                 // The absolute value is meaningless, as long as it is greater than 0.
                                 // This way, in other checking logic, if lastFailedVersion is found to be greater than 0,
                                 // it will be considered a version missing replica and will be handled accordingly.
-                                replica.setLastFailedVersion(1L);
-                                backendReplicasInfo.addMissingVersionReplica(tabletId);
-                                LOG.info("set fail version for tablet: {}", tabletId);
+                                if (replica.getLastFailedVersion() < 0){
+                                    replica.setLastFailedVersion(1L);
+                                    backendReplicasInfo.addMissingVersionReplica(tabletId);
+                                    LOG.info("set fail version for tablet: {}", tabletId);
+                                }
                                 break;
                             }
                         }
